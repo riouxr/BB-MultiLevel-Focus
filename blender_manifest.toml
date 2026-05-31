@@ -1,0 +1,14 @@
+schema_version = "1.0.0"
+
+id      = "bb_multilevel_focus"
+version = "1.0.0"
+name    = "BB MultiLevel Focus"
+tagline = "Multi-level viewport focus and object isolation"
+
+maintainer = "BB"
+type       = "add-on"
+
+blender_version_min = "4.2.0"
+
+license  = ["SPDX:GPL-2.0-or-later"]
+category = "3D View"
