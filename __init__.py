@@ -6,9 +6,9 @@
 bl_info = {
     "name":        "BB MultiLevel Focus",
     "author":      "Blender Bob + Claude.ai",
-    "version":     (1, 0, 0),
+    "version":     (1, 1, 0),
     "blender":     (4, 2, 0),
-    "location":    "View3D: F / Ctrl+F",
+    "location":    "View3D: F / Ctrl+F / Ctrl+Shift+F",
     "description": "Multi-level viewport focus and object isolation",
     "category":    "3D View",
 }
@@ -184,6 +184,11 @@ class BB_OT_MultiLevelFocus(bpy.types.Operator):
         description="Isolate everything except the selection",
         default=False)
 
+    keep_lights: BoolProperty(
+        name="Keep Lights Visible",
+        description="Leave lights visible when isolating so the scene stays lit",
+        default=False)
+
     @classmethod
     def poll(cls, context):
         return (context.space_data and
@@ -198,6 +203,7 @@ class BB_OT_MultiLevelFocus(bpy.types.Operator):
         else:
             col.prop(self, "suppress_mirrors", toggle=True)
             col.prop(self, "invert",           toggle=True)
+            col.prop(self, "keep_lights",      toggle=True)
 
     def execute(self, context):
         if self.mode == 'VIEW_SELECTED':
@@ -262,20 +268,31 @@ class BB_OT_MultiLevelFocus(bpy.types.Operator):
         selection = list(context.selected_objects)
 
         if space.local_view:
-            if selection and set(selection) != set(visible):
+            # Deepen only if there is something we'd actually hide. Kept lights
+            # stay visible but unselected, so they must not count as "more to
+            # isolate" — otherwise the toggle could never exit.
+            if selection and self._hideable(selection, visible):
                 self._enter(space, scene, selection, visible)
             else:
                 self._exit(space, scene)
         else:
             if not selection:
                 return {'CANCELLED'}
-            _stack_write(scene, "[]")
+            _stack_write(scene, [])
             self._enter(space, scene, selection, visible, first=True)
 
         return {'FINISHED'}
 
+    def _hideable(self, selection, visible):
+        """Visible objects that would be hidden by isolation, honouring keep_lights."""
+        sel = set(selection)
+        out = [obj for obj in visible if obj not in sel]
+        if self.keep_lights:
+            out = [obj for obj in out if obj.type != 'LIGHT']
+        return out
+
     def _enter(self, space, scene, selection, visible, first=False):
-        to_hide = [obj for obj in visible if obj not in selection]
+        to_hide = self._hideable(selection, visible)
 
         # On the very first level, even with nothing to hide we still
         # enter local view so subsequent levels can go deeper.
@@ -283,7 +300,19 @@ class BB_OT_MultiLevelFocus(bpy.types.Operator):
             return
 
         if first:
+            # localview isolates the *selected* objects, so temporarily select
+            # the lights we want to keep visible before entering local view.
+            kept_lights = []
+            if self.keep_lights:
+                kept_lights = [obj for obj in visible
+                               if obj.type == 'LIGHT' and not obj.select_get()]
+                for obj in kept_lights:
+                    obj.select_set(True)
+
             bpy.ops.view3d.localview(frame_selected=False)
+
+            for obj in kept_lights:
+                obj.select_set(False)
         else:
             for obj in to_hide:
                 obj.local_view_set(space, False)
@@ -369,6 +398,13 @@ def register():
         kmi = km.keymap_items.new('bb.multi_level_focus', 'F', 'PRESS', ctrl=True, alt=True)
         kmi.properties.mode   = 'ISOLATE'
         kmi.properties.invert = True
+        _keymaps.append((km, kmi))
+
+        km  = kc.keymaps.new(name='Object Mode')
+        kmi = km.keymap_items.new('bb.multi_level_focus', 'F', 'PRESS', ctrl=True, shift=True)
+        kmi.properties.mode        = 'ISOLATE'
+        kmi.properties.invert      = False
+        kmi.properties.keep_lights = True
         _keymaps.append((km, kmi))
 
     if _hud_sync not in bpy.app.handlers.depsgraph_update_post:

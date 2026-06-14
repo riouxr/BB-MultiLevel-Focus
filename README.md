@@ -7,6 +7,7 @@ A Blender extension for multi-level viewport focus and object isolation.
 - **View Selected** — Zooms the viewport to the current selection. If nothing is selected, fits the entire scene. Mirror modifiers are temporarily hidden so they don't skew the framing.
 - **Local View (Multi-Level)** — Isolates the selected objects using Blender's Local View, but with a history stack. You can keep drilling deeper into sub-selections and step back out level by level.
 - **Inverted Isolation** — Isolate everything *except* the selection.
+- **Keep Lights Visible** — Isolate the selection while leaving lights visible, so the scene stays lit while you work.
 - **Mirror Suppression** — Optionally hides Mirror modifiers on focused objects to reduce visual noise while working.
 - **HUD** — A white border and "Focus Level: N" label appear in the viewport while you're inside an isolation level.
 
@@ -17,6 +18,7 @@ A Blender extension for multi-level viewport focus and object isolation.
 | `F` | View Selected |
 | `Ctrl + F` | Enter / step deeper into Local View isolation |
 | `Ctrl + Alt + F` | Enter isolation (inverted — hide selection, keep the rest) |
+| `Ctrl + Shift + F` | Isolate the selection but keep lights visible |
 
 Pressing `Ctrl + F` again when nothing new is selected steps back out one level.
 
